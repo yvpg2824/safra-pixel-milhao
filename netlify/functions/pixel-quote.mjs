@@ -36,8 +36,8 @@ export default async function handler(req){
   const resp=await fetch(endpoint,{headers:{apikey:key,Authorization:'Bearer '+key},signal:AbortSignal.timeout(6000),cache:'no-store'});
   if(!resp.ok)return send(503,{error:'availability_unavailable',paymentEnabled:false});
   const orders=await resp.json();
-  if(!Array.isArray(orders))return send(503,{error:'availability_unavailable',paymentEnabled:false});
-  const occupied=orders.some(o=>Number(o.x)+Number(o.size)>q.x&&Number(o.y)+Number(o.size)>q.y);
+  if(!Array.isArray(orders)||orders.length>=1000)return send(503,{error:'availability_inconclusive',paymentEnabled:false});
+  const occupied=orders.some(o=>Number.isInteger(Number(o.x))&&Number.isInteger(Number(o.y))&&Number.isInteger(Number(o.size))&&Number(o.x)+Number(o.size)>q.x&&Number(o.y)+Number(o.size)>q.y);
   return send(200,{quote:q,kind:'indicative_preview',availabilityVerified:true,available:!occupied,reserved:false,paymentEnabled:false,message:occupied?'Espaço indisponível.':'Espaço sem reserva/venda ativa no momento da consulta; não há bloqueio de estoque.'});
  }catch{return send(503,{error:'availability_unavailable',paymentEnabled:false})}
 }
