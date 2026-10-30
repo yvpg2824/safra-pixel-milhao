@@ -23,6 +23,22 @@ export default async function handler(req){
  try{const raw=await req.text();if(raw.length>512)return send(413,{error:'too_large'});data=JSON.parse(raw)}catch{return send(400,{error:'invalid_json'})}
  const q=validate(data?.x,data?.y,data?.size);
  if(!q)return send(422,{error:'invalid_or_unavailable_area'});
- return send(200,{quote:q,kind:'indicative_preview',availabilityVerified:false,reserved:false,paymentEnabled:false,message:'Cotação demonstrativa: preço calculado no servidor, disponibilidade no banco ainda não consultada.'});
+ // Optional read-only Supabase availability. Fail closed: never claim free without checking DB.
+ const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ if(!url||!key)return send(200,{quote:q,kind:'indicative_preview',availabilityVerified:false,reserved:false,paymentEnabled:false,message:'Consulta do banco ainda não configurada.'});
+ try {
+  const endpoint=new URL('/rest/v1/safra_pixel_orders',url);
+  endpoint.searchParams.set('select','x,y,size,status');
+  endpoint.searchParams.set('status','in.(reserved,sold)');
+  endpoint.searchParams.set('x','lt.'+(q.x+q.size));
+  endpoint.searchParams.set('y','lt.'+(q.y+q.size));
+  endpoint.searchParams.set('limit','1000');
+  const resp=await fetch(endpoint,{headers:{apikey:key,Authorization:'Bearer '+key},signal:AbortSignal.timeout(6000),cache:'no-store'});
+  if(!resp.ok)return send(503,{error:'availability_unavailable',paymentEnabled:false});
+  const orders=await resp.json();
+  if(!Array.isArray(orders))return send(503,{error:'availability_unavailable',paymentEnabled:false});
+  const occupied=orders.some(o=>Number(o.x)+Number(o.size)>q.x&&Number(o.y)+Number(o.size)>q.y);
+  return send(200,{quote:q,kind:'indicative_preview',availabilityVerified:true,available:!occupied,reserved:false,paymentEnabled:false,message:occupied?'Espaço indisponível.':'Espaço sem reserva/venda ativa no momento da consulta; não há bloqueio de estoque.'});
+ }catch{return send(503,{error:'availability_unavailable',paymentEnabled:false})}
 }
 export const config={path:'/api/pixel/quote'};
