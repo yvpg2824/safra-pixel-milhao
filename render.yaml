@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: safra-pixel-pi-verifier
+    runtime: node
+    rootDir: pi-server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://safra-pixel-testnet.netlify.app,https://yvpg2824.github.io
