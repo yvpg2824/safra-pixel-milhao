@@ -2,9 +2,9 @@ name: Testar cotação de pixels
 on:
   push:
     branches: [pi-testnet]
-    paths: ['netlify/functions/pixel-quote.mjs','netlify/functions/pixel-quote.test.mjs','.github/workflows/pixel-quote-tests.yml']
+    paths: ['netlify/functions/pixel-quote.mjs','tests/pixel-quote.test.mjs','.github/workflows/pixel-quote-tests.yml']
   pull_request:
-    paths: ['netlify/functions/pixel-quote.mjs','netlify/functions/pixel-quote.test.mjs']
+    paths: ['netlify/functions/pixel-quote.mjs','tests/pixel-quote.test.mjs']
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,4 +13,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test netlify/functions/pixel-quote.test.mjs
+      - run: node --test tests/pixel-quote.test.mjs
