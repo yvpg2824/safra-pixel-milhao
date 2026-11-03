@@ -1,7 +1,7 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAFRA — Teste de reserva com Test-Pi</title><script src="https://sdk.minepi.com/pi-sdk.js"></script><style>body{background:#0b1423;color:#f3eddd;font:16px system-ui;max-width:620px;margin:auto;padding:20px}input,select,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}button{background:#e0bd73;border:0;border-radius:8px;color:#211b0f;font-weight:bold}button:disabled{opacity:.45}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#162239;padding:12px}</style></head><body><h1>Pagamento de reserva — Testnet</h1><p>Somente Test-Pi. O pagamento reserva uma área de teste e não concede propriedade Mainnet.</p><button id="load">Entrar com Pi e carregar meus interesses</button><label for="interest">Escolha um interesse já registrado</label><select id="interest" disabled><option value="">Entre com Pi para carregar</option></select><button id="prepare" disabled>Verificar reserva de teste</button><button id="diagnose" disabled>Diagnóstico Testnet (sem pagamento)</button><pre id="result" role="status">O pagamento ainda não está habilitado. Nenhuma cobrança ocorrerá nesta página.</pre><button id="pay" disabled>Autorizar pagamento com Test-Pi</button><p><a href="./" style="color:#e0bd73">Voltar ao mural</a></p><script>
-(()=>{'use strict';const endpoint='https://ybrfyemtbilrtuqdftpl.supabase.co/functions/v1/pixel-u2a-payments';const result=document.getElementById('result'),prepare=document.getElementById('prepare'),pay=document.getElementById('pay'),load=document.getElementById('load'),select=document.getElementById('interest');let auth=null,intent=null;
+(()=>{'use strict';const endpoint='https://ybrfyemtbilrtuqdftpl.supabase.co/functions/v1/pixel-u2a-payments';const result=document.getElementById('result'),prepare=document.getElementById('prepare'),pay=document.getElementById('pay'),load=document.getElementById('load'),diagnose=document.getElementById('diagnose'),select=document.getElementById('interest');let auth=null,intent=null;
 async function call(action,fields){const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,accessToken:auth.accessToken,...fields}),cache:'no-store'});const data=await r.json();if(!r.ok)throw Error(data.error||('HTTP '+r.status));return data;}
-load.onclick=async()=>{load.disabled=true;prepare.disabled=true;pay.disabled=true;intent=null;result.textContent='Autenticando no Pi Browser…';try{
+load.onclick=async()=>{load.disabled=true;prepare.disabled=true;diagnose.disabled=true;pay.disabled=true;intent=null;result.textContent='Autenticando no Pi Browser…';try{
  if(!window.Pi)throw Error('Abra esta página no Pi Browser.');
  await Pi.init({version:'2.0'});auth=await Pi.authenticate(['username','payments'],()=>{result.textContent='Pagamento incompleto detectado. Verifique a Pi Wallet antes de tentar novamente.';});
  if(!auth?.accessToken)throw Error('Login Pi não autorizado.');
@@ -9,8 +9,22 @@ load.onclick=async()=>{load.disabled=true;prepare.disabled=true;pay.disabled=tru
  const data=await response.json();if(!response.ok)throw Error(data.error||'Consulta indisponível.');
  select.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecione um interesse';select.append(placeholder);
  for(const row of data.interests||[]){const opt=document.createElement('option');opt.value=row.id;opt.textContent='X '+row.x+' / Y '+row.y+' · '+row.size+'×'+row.size+' · '+Number(row.amount_pi).toLocaleString('pt-BR')+' Pi'+(row.eligibleForPreparation?' · Disponível para verificação':' · Registro incompleto');opt.disabled=row.eligibleForPreparation!==true;select.append(opt);}
- select.disabled=!(data.interests||[]).length;result.textContent=(data.interests||[]).length+' interesse(s) encontrado(s). Escolha um para verificar a entrada Testnet. Nenhum pagamento foi realizado.';
+ select.disabled=!(data.interests||[]).length;diagnose.disabled=false;result.textContent=(data.interests||[]).length+' interesse(s) encontrado(s). Escolha um para verificar a entrada Testnet. Nenhum pagamento foi realizado.';
  }catch(e){result.textContent='Não foi possível carregar: '+e.message;}finally{load.disabled=false;}};
+diagnose.onclick=async()=>{
+ diagnose.disabled=true;pay.disabled=true;
+ try{
+ const d=await call('diagnose',{});
+ result.textContent=[
+  'Conexão com API Pi: '+(d.keyAccepted?'validada':'não validada'),
+  'Chave cadastrada: '+(d.keyConfigured?'sim':'não'),
+  'Chave aceita: '+(d.keyAccepted?'sim':'não'),
+  'Ativação servidor: '+(d.serverSwitchOn?'ligada':'desligada'),
+  'Rede Testnet configurada: '+(d.networkSwitchTestnet?'sim':'não'),
+  d.readyForSmallTest?'Apto para verificar a reserva de 4 Test-Pi.':'Cobrança continua bloqueada.'
+ ].join(String.fromCharCode(10));
+ }catch(e){result.textContent='Diagnóstico indisponível: '+e.message;}finally{diagnose.disabled=false;}
+};
 select.onchange=()=>{prepare.disabled=!select.value||!auth;pay.disabled=true;intent=null;};
 prepare.onclick=async()=>{prepare.disabled=true;pay.disabled=true;intent=null;try{
  const interestId=select.value;if(!/^[0-9a-f-]{36}$/i.test(interestId))throw Error('Escolha um interesse válido.');
