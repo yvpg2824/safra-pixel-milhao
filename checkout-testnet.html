@@ -32,6 +32,8 @@ prepare.onclick=async()=>{prepare.disabled=true;pay.disabled=true;intent=null;tr
  if(!auth?.accessToken)throw Error('Entre com Pi primeiro.');
  if(!auth?.accessToken)throw Error('Login Pi não autorizado.');
  intent=await call('prepare',{interestId});
+ if(intent.pendingExistingPayment===true){result.textContent='Pagamento anterior já aprovado no servidor, mas sem conclusão confirmada. Não crie outro pagamento e não digite a frase da carteira novamente. Aguarde a conferência do pagamento existente.';pay.disabled=true;return;}
+ if(intent.status&&intent.status!=='draft'){result.textContent='Esta reserva já está no estado: '+intent.status+'. Nenhum novo pagamento será iniciado.';pay.disabled=true;return;}
  result.textContent='Interesse: '+intent.intentId+'\\nValor da entrada: '+intent.amount+' Test-Pi\\n'+(intent.enabled?'Autorização disponível.':'Pagamento permanece desabilitado no servidor. Nenhuma cobrança foi feita.');
  const allowed=intent.enabled===true&&intent.network==='Pi Testnet'&&intent.amount===4&&intent.intentId==='2ed37afa-9f9d-4ee6-b4d5-302dad05e345';
  if(!allowed) result.textContent+=String.fromCharCode(10)+(intent.intentId!=='2ed37afa-9f9d-4ee6-b4d5-302dad05e345'?'Esta não é a reserva liberada. Escolha X 612 / Y 970 (1×1).':intent.enabled!==true?'Servidor ainda não liberou a cobrança. Execute o Diagnóstico Testnet e confira a chave e as opções.':'Bloqueado por divergência de rede ou valor. Não pague.');
