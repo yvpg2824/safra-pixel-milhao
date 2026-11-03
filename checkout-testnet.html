@@ -8,7 +8,7 @@ load.onclick=async()=>{load.disabled=true;prepare.disabled=true;pay.disabled=tru
  const response=await fetch('https://ybrfyemtbilrtuqdftpl.supabase.co/functions/v1/pixel-my-interests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken:auth.accessToken}),cache:'no-store'});
  const data=await response.json();if(!response.ok)throw Error(data.error||'Consulta indisponível.');
  select.replaceChildren();const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecione um interesse';select.append(placeholder);
- for(const row of data.interests||[]){const opt=document.createElement('option');opt.value=row.id;opt.textContent='X '+row.x+' / Y '+row.y+' · '+row.size+'×'+row.size+' · '+Number(row.amount_pi).toLocaleString('pt-BR')+' Pi';select.append(opt);}
+ for(const row of data.interests||[]){const opt=document.createElement('option');opt.value=row.id;opt.textContent='X '+row.x+' / Y '+row.y+' · '+row.size+'×'+row.size+' · '+Number(row.amount_pi).toLocaleString('pt-BR')+' Pi'+(row.eligibleForPreparation?' · Disponível para verificação':' · Registro incompleto');opt.disabled=row.eligibleForPreparation!==true;select.append(opt);}
  select.disabled=!(data.interests||[]).length;result.textContent=(data.interests||[]).length+' interesse(s) encontrado(s). Escolha um para verificar a entrada Testnet. Nenhum pagamento foi realizado.';
  }catch(e){result.textContent='Não foi possível carregar: '+e.message;}finally{load.disabled=false;}};
 select.onchange=()=>{prepare.disabled=!select.value||!auth;pay.disabled=true;intent=null;};
