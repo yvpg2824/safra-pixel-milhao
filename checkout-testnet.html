@@ -1,0 +1,22 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SAFRA — Teste de reserva com Test-Pi</title><script src="https://sdk.minepi.com/pi-sdk.js"></script><style>body{background:#0b1423;color:#f3eddd;font:16px system-ui;max-width:620px;margin:auto;padding:20px}input,button{font:inherit;padding:12px;margin:8px 0;width:100%;box-sizing:border-box}button{background:#e0bd73;border:0;border-radius:8px;color:#211b0f;font-weight:bold}button:disabled{opacity:.45}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#162239;padding:12px}</style></head><body><h1>Pagamento de reserva — Testnet</h1><p>Somente Test-Pi. O pagamento reserva uma área de teste e não concede propriedade Mainnet.</p><label for="interest">ID do interesse registrado</label><input id="interest" placeholder="UUID do interesse" autocomplete="off"><button id="prepare">Verificar reserva de teste</button><pre id="result" role="status">O pagamento ainda não está habilitado. Nenhuma cobrança ocorrerá nesta página.</pre><button id="pay" disabled>Autorizar pagamento com Test-Pi</button><p><a href="./" style="color:#e0bd73">Voltar ao mural</a></p><script>
+(()=>{'use strict';const endpoint='https://ybrfyemtbilrtuqdftpl.supabase.co/functions/v1/pixel-u2a-payments';const result=document.getElementById('result'),prepare=document.getElementById('prepare'),pay=document.getElementById('pay');let auth=null,intent=null;
+async function call(action,fields){const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,accessToken:auth.accessToken,...fields}),cache:'no-store'});const data=await r.json();if(!r.ok)throw Error(data.error||('HTTP '+r.status));return data;}
+prepare.onclick=async()=>{prepare.disabled=true;pay.disabled=true;intent=null;try{
+ const interestId=document.getElementById('interest').value.trim();if(!/^[0-9a-f-]{36}$/i.test(interestId))throw Error('Informe um ID de interesse válido.');
+ if(!window.Pi)throw Error('Abra no Pi Browser.');
+ await Pi.init({version:'2.0'});auth=await Pi.authenticate(['username','payments'],()=>{result.textContent='Pagamento incompleto: verifique o histórico na Pi Wallet antes de repetir.';});
+ if(!auth?.accessToken)throw Error('Login Pi não autorizado.');
+ intent=await call('prepare',{interestId});
+ result.textContent='Interesse: '+intent.intentId+'\\nValor da entrada: '+intent.amount+' Test-Pi\\n'+(intent.enabled?'Autorização disponível.':'Pagamento permanece desabilitado no servidor. Nenhuma cobrança foi feita.');
+ // Fail closed while server prepare declares enabled:false. No payment before server readiness is verified.
+ pay.disabled=intent.enabled!==true;
+}catch(e){result.textContent='Não foi possível preparar: '+e.message;}finally{prepare.disabled=false;}};
+pay.onclick=async()=>{if(!intent||intent.enabled!==true||!auth)return;pay.disabled=true;result.textContent='Aguardando autorização da Pi Wallet...';try{
+ await Pi.createPayment({amount:intent.amount,memo:intent.memo,metadata:intent.metadata},{
+ onReadyForServerApproval:async paymentId=>{await call('approve',{intentId:intent.intentId,paymentId});},
+ onReadyForServerCompletion:async(paymentId,txid)=>{const confirmed=await call('complete',{intentId:intent.intentId,paymentId,txid});result.textContent=confirmed.completed?'Pagamento Testnet confirmado; reserva aguardando revisão.':'Conclusão pendente: não repita o pagamento.';},
+ onCancel:()=>{result.textContent='Pagamento cancelado.';},
+ onError:()=>{result.textContent='Erro no pagamento. Verifique a Pi Wallet antes de tentar novamente.';}
+ });}catch(e){result.textContent='Pagamento não concluído: '+e.message;}};
+})();
+</script></body></html>
