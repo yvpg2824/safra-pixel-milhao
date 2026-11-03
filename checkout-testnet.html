@@ -34,7 +34,7 @@ prepare.onclick=async()=>{prepare.disabled=true;pay.disabled=true;intent=null;tr
  intent=await call('prepare',{interestId});
  result.textContent='Interesse: '+intent.intentId+'\\nValor da entrada: '+intent.amount+' Test-Pi\\n'+(intent.enabled?'Autorização disponível.':'Pagamento permanece desabilitado no servidor. Nenhuma cobrança foi feita.');
  // Fail closed while server prepare declares enabled:false. No payment before server readiness is verified.
- pay.disabled=true;
+ pay.disabled=!(intent.enabled===true&&intent.network==='Pi Testnet'&&intent.amount===4&&intent.intentId==='2ed37afa-9f9d-4ee6-b4d5-302dad05e345');
 }catch(e){result.textContent='Não foi possível preparar: '+e.message;}finally{prepare.disabled=false;}};
 pay.onclick=async()=>{return; if(!intent||intent.enabled!==true||!auth)return;pay.disabled=true;result.textContent='Aguardando autorização da Pi Wallet...';try{
  await Pi.createPayment({amount:intent.amount,memo:intent.memo,metadata:intent.metadata},{
