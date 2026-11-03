@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://sdk.minepi.com 'unsafe-inline'; connect-src 'self' https://socialchain.app; style-src 'self' 'unsafe-inline';">
+<title>SAFRA — A2U Testnet | Identificar destinatário</title>
+<script src="https://sdk.minepi.com/pi-sdk.js"></script>
+<style>body{font:16px system-ui;background:#0b1423;color:#f1ede2;max-width:680px;margin:auto;padding:24px}button{padding:12px;background:#ddbd75;color:#171717;border:0;border-radius:8px;font-weight:bold}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#19263c;padding:15px}a{color:#ead08a}</style></head>
+<body><h1>SAFRA — Destinatário A2U (Testnet)</h1>
+<p>Use esta página no Pi Browser e entre com sua conta Pi para identificar o UID necessário a um pagamento de teste. <strong>Esta página não envia Pi.</strong></p>
+<button id="verify">Entrar com Pi e identificar minha conta</button><pre id="result" role="status">Nenhuma conta verificada.</pre>
+<p>Repita em cada conta participante, com autorização do titular. Não compartilhe frases de recuperação nem chaves privadas. O aplicativo precisa de cinco UIDs distintos, não apenas cinco endereços de carteira.</p>
+<p><a href="./">Voltar ao mural</a></p>
+<script>
+(()=>{'use strict';const btn=document.getElementById('verify'),out=document.getElementById('result');
+btn.onclick=async()=>{btn.disabled=true;out.textContent='Verificando com a Pi Network…';
+try{if(!window.Pi)throw Error('Abra no Pi Browser.');await Pi.init({version:'2.0'});
+const auth=await Pi.authenticate(['username'],()=>{});if(!auth?.accessToken)throw Error('Autorização não recebida.');
+const r=await fetch('/api/pixel/a2u/verify-recipient',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken:auth.accessToken}),cache:'no-store'});
+const data=await r.json();if(!r.ok)throw Error(data.error||'Verificação indisponível');
+out.textContent='Conta: '+(data.username||'(sem nome)')+'\nUID: '+data.uid+'\nRede: '+data.network+'\nNenhum pagamento enviado.';}
+catch(e){out.textContent='Não foi possível verificar: '+(e.message||'erro desconhecido');}finally{btn.disabled=false;}};
+})();
+</script></body></html>
